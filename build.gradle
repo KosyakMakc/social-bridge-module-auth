@@ -17,13 +17,13 @@ repositories {
 dependencies {
     compileOnly "com.j256.ormlite:ormlite-core:6.1"
     compileOnly "com.j256.ormlite:ormlite-jdbc:6.1"
-    compileOnly "io.github.kosyakmakc:social-bridge:0.1.0-14"
-    compileOnly "io.github.kosyakmakc:social-bridge-telegram:0.1.0-4"
+    compileOnly "io.github.kosyakmakc:social-bridge:0.2.+"
+    compileOnly "io.github.kosyakmakc:social-bridge-telegram:0.2.+"
 
     testImplementation "com.j256.ormlite:ormlite-core:6.1"
     testImplementation "com.j256.ormlite:ormlite-jdbc:6.1"
-    testImplementation "io.github.kosyakmakc:social-bridge:0.1.0-14"
-    testImplementation "io.github.kosyakmakc:social-bridge-telegram:0.1.0-4"
+    testImplementation "io.github.kosyakmakc:social-bridge:0.2.+"
+    testImplementation "io.github.kosyakmakc:social-bridge-telegram:0.2.+"
 
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'

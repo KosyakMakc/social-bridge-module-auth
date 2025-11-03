@@ -22,10 +22,10 @@ repositories {
 dependencies {
     implementation project(":")
 
-    compileOnly "io.github.kosyakmakc:social-bridge:0.1.0-14"
-    testImplementation "io.github.kosyakmakc:social-bridge:0.1.0-14"
-    compileOnly "io.github.kosyakmakc:social-bridge-telegram:0.1.0-4"
-    testImplementation "io.github.kosyakmakc:social-bridge-telegram:0.1.0-4"
+    compileOnly "io.github.kosyakmakc:social-bridge:0.2.+"
+    testImplementation "io.github.kosyakmakc:social-bridge:0.2.+"
+    compileOnly "io.github.kosyakmakc:social-bridge-telegram:0.2.+"
+    testImplementation "io.github.kosyakmakc:social-bridge-telegram:0.2.+"
 
     compileOnly "io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT"
     testImplementation "io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT"

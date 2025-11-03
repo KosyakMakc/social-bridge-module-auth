@@ -25,16 +25,22 @@ import java.util.List;
 
 public class AuthModule implements IBridgeModule {
     private static final String NAME = "AuthSocial";
+
     public static final List<ISocialCommand> socialCommands = List.of(
             new CommitLoginCommand(),
             new LogoutLoginCommand()
     );
+
     public static final List<IMinecraftCommand> minecraftCommands = List.of(
             new LoginCommand(),
             new StatusCommand()
     );
-    public static final List<ITranslationSource> translationSources = List.of(new English());
-    public static final Version SocialBridge_CompabilityVersion = new Version(0, 1, 0);
+
+    public static final List<ITranslationSource> translationSources = List.of(
+            new English()
+    );
+
+    public static final Version SocialBridge_CompabilityVersion = new Version(0, 2, 0);
 
     private final HashMap<ISocialPlatform, ISocialPlatformHandler> socialHandlersMap;
 
@@ -108,5 +114,4 @@ public class AuthModule implements IBridgeModule {
     public String getName() {
         return NAME;
     }
-
 }

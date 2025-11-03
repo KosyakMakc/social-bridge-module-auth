@@ -2,6 +2,7 @@ package io.github.kosyakmakc.socialBridge.AuthSocial.Commands.MinecraftCommands;
 
 import io.github.kosyakmakc.socialBridge.AuthSocial.AuthModule;
 import io.github.kosyakmakc.socialBridge.AuthSocial.Utils.AuthMessageKey;
+import io.github.kosyakmakc.socialBridge.AuthSocial.Utils.AuthPermissions;
 import io.github.kosyakmakc.socialBridge.Commands.MinecraftCommands.MinecraftCommandBase;
 import io.github.kosyakmakc.socialBridge.MinecraftPlatform.MinecraftUser;
 
@@ -10,7 +11,7 @@ import java.util.List;
 
 public class StatusCommand extends MinecraftCommandBase {
     public StatusCommand() {
-        super("Status");
+        super("status", AuthPermissions.CAN_STATUS);
     }
 
     @Override
