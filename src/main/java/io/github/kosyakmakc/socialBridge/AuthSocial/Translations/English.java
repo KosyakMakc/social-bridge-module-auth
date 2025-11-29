@@ -31,7 +31,7 @@ public class English implements ITranslationSource {
                 new Localization(getLanguage(), AuthMessageKey.COMMIT_LOGIN_FAILED.key(), "Unable confirm authorization with this code."),
 
                 // shared text
-                new Localization(getLanguage(), AuthMessageKey.LOGOUT_SUCCESS.key(), "You(<social-name>) are successfully logout from profile(<minecraft-name>) on <social-platform-name> platform."),
+                new Localization(getLanguage(), AuthMessageKey.LOGOUT_SUCCESS.key(), "You(<social-name>) are successfully logout from profile(<minecraft-name>) on this platform."), // also available <social-platform-name>
                 new Localization(getLanguage(), AuthMessageKey.LOGOUT_FAILED.key(), "You(<social-name>) unable to logout - not authenticated.") // also available <social-platform-name>
         );
     }

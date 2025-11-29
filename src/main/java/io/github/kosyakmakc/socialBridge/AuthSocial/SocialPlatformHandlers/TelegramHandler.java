@@ -15,6 +15,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 
+import org.jetbrains.annotations.Nullable;
+
 public record TelegramHandler(ISocialBridge bridge) implements ISocialPlatformHandler {
 
     @Override
@@ -121,12 +123,12 @@ public record TelegramHandler(ISocialBridge bridge) implements ISocialPlatformHa
     }
 
     @Override
-    public boolean logoutUser(SocialUser socialUser) {
+    public @Nullable UUID logoutUser(SocialUser socialUser) {
         if (!(socialUser instanceof TelegramUser tgUser)) {
             throw new RuntimeException("incorrect usage, SocialUser(" + socialUser.getClass().getName() + ") MUST BE assigned to this ISocialPlatform(" + this.getClass().getName() + ")");
         }
         var logger = bridge.getLogger();
-        var result = new AtomicBoolean(false);
+        var result = new AtomicReference<UUID>(null);
         try {
             bridge.queryDatabase(databaseContext -> {
                 var association = databaseContext.getDaoTable(Association_telegram.class)
@@ -140,9 +142,9 @@ public record TelegramHandler(ISocialBridge bridge) implements ISocialPlatformHa
                 if (association != null) {
                     association.Delete();
                     databaseContext.getDaoTable(Association_telegram.class).update(association);
-                    result.set(true);
+                    result.set(association.getMinecraftId());
                 } else {
-                    result.set(false);
+                    result.set(null);
                 }
 
                 return null;

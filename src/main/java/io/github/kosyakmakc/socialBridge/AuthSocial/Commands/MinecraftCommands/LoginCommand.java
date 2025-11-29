@@ -1,5 +1,6 @@
 package io.github.kosyakmakc.socialBridge.AuthSocial.Commands.MinecraftCommands;
 
+import io.github.kosyakmakc.socialBridge.AuthSocial.AuthModule;
 import io.github.kosyakmakc.socialBridge.AuthSocial.DatabaseTables.AuthSession;
 import io.github.kosyakmakc.socialBridge.AuthSocial.Utils.AuthMessageKey;
 import io.github.kosyakmakc.socialBridge.AuthSocial.Utils.AuthPermissions;
@@ -16,18 +17,20 @@ import java.util.logging.Level;
 
 public class LoginCommand extends MinecraftCommandBase {
     private final Random random;
+    private final AuthModule module;
 
-    public LoginCommand() {
+    public LoginCommand(AuthModule module) {
         super("login", AuthPermissions.CAN_LOGIN);
         random = new Random(System.currentTimeMillis());
+        this.module = module;
     }
 
     @Override
     public void execute(MinecraftUser sender, List<Object> args) {
         var bridge = getBridge();
-        var logger = bridge.getLogger();
+        var logger = module.getLogger();
 
-        var code = random.nextInt() % 1_000_000;
+        var code = random.nextInt(100_000, 1_000_000);
         var message = getBridge().getLocalizationService().getMessage(sender.getLocale(), AuthMessageKey.LOGIN_FROM_MINECRAFT);
         var placeholders = new HashMap<String, String>();
         placeholders.put("placeholder-code", Integer.toString(code));

@@ -9,14 +9,16 @@ import java.util.HashMap;
 import java.util.List;
 
 public class LogoutLoginCommand extends SocialCommandBase {
-    public LogoutLoginCommand() {
+    private final AuthModule module;
+
+    public LogoutLoginCommand(AuthModule module) {
         super("logout");
+        this.module = module;
     }
 
     @Override
     public void execute(SocialUser sender, List<Object> args) {
-        var bridge = getBridge();
-        var logger = bridge.getLogger();
+        var logger = module.getLogger();
 
         var platformName = sender.getPlatform().getPlatformName();
         var socialName = sender.getName();
@@ -25,22 +27,16 @@ public class LogoutLoginCommand extends SocialCommandBase {
         placeholders.put("social-platform-name", sender.getPlatform().getPlatformName());
         placeholders.put("social-name", socialName);
 
-        var handler = bridge.getModule(AuthModule.class).getSocialHandler(sender.getPlatform());
-        if (handler == null) {
-            sender.sendMessage(getBridge().getLocalizationService().getMessage(sender.getLocale(), AuthMessageKey.UNSUPPORTED_PLATFORM), placeholders);
-            return;
-        }
-
-        var player = handler.tryGetMinecraftUser(sender);
+        var player = module.tryGetMinecraftUser(sender);
         if (player == null) {
             logger.info("social(" + sender.getName() + ") failed to logout - not authenticated.");
             sender.sendMessage(getBridge().getLocalizationService().getMessage(sender.getLocale(), AuthMessageKey.LOGOUT_FAILED), placeholders);
             return;
         }
         var minecraftName = player.getName();
-        var isLogout = handler.logoutUser(sender);
+        var minecraftId = module.logoutUser(sender);
 
-        if (isLogout) {
+        if (minecraftId != null) {
             placeholders.put("minecraft-name", minecraftName);
 
             logger.info("minecraft(" + minecraftName + ") is logout from " + platformName + " platform.");

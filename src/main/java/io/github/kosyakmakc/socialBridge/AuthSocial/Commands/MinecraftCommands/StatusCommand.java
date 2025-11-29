@@ -10,15 +10,18 @@ import java.util.HashMap;
 import java.util.List;
 
 public class StatusCommand extends MinecraftCommandBase {
-    public StatusCommand() {
+    private final AuthModule module;
+
+    public StatusCommand(AuthModule module) {
         super("status", AuthPermissions.CAN_STATUS);
+        this.module = module;
     }
 
     @Override
     public void execute(MinecraftUser minecraftUser, List<Object> list) {
         minecraftUser.sendMessage(getBridge().getLocalizationService().getMessage(minecraftUser.getLocale(), AuthMessageKey.STATUS_COMMAND_HEADER), new HashMap<>());
         var isAny = false;
-        for (var handler : getBridge().getModule(AuthModule.class).getSocialHandlers()) {
+        for (var handler : module.getSocialHandlers()) {
             if (handler.isAuthorized(minecraftUser)) {
                 isAny = true;
                 var placeholders = new HashMap<String, String>();

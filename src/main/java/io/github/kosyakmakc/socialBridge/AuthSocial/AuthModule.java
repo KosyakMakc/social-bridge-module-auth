@@ -13,31 +13,40 @@ import io.github.kosyakmakc.socialBridge.AuthSocial.Translations.English;
 import io.github.kosyakmakc.socialBridge.Commands.MinecraftCommands.IMinecraftCommand;
 import io.github.kosyakmakc.socialBridge.Commands.SocialCommands.ISocialCommand;
 import io.github.kosyakmakc.socialBridge.DatabasePlatform.DefaultTranslations.ITranslationSource;
+import io.github.kosyakmakc.socialBridge.MinecraftPlatform.MinecraftUser;
 import io.github.kosyakmakc.socialBridge.IBridgeModule;
 import io.github.kosyakmakc.socialBridge.ISocialBridge;
 import io.github.kosyakmakc.socialBridge.SocialPlatforms.ISocialPlatform;
+import io.github.kosyakmakc.socialBridge.SocialPlatforms.SocialUser;
 import io.github.kosyakmakc.socialBridge.Utils.Version;
 
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
+import java.util.logging.Logger;
+
+import org.jetbrains.annotations.Nullable;
 
 public class AuthModule implements IBridgeModule {
     public static final Version SocialBridge_CompabilityVersion = new Version(0, 2, 1);
     private static final String NAME = "AuthSocial";
+    private Logger logger;
 
-    public static final List<ISocialCommand> socialCommands = List.of(
-            new CommitLoginCommand(),
-            new LogoutLoginCommand()
+    public final AuthEvents events = new AuthEvents();
+
+    public final List<ISocialCommand> socialCommands = List.of(
+            new CommitLoginCommand(this),
+            new LogoutLoginCommand(this)
     );
 
-    public static final List<IMinecraftCommand> minecraftCommands = List.of(
-            new LoginCommand(),
-            new StatusCommand()
+    public final List<IMinecraftCommand> minecraftCommands = List.of(
+            new LoginCommand(this),
+            new StatusCommand(this)
     );
 
-    public static final List<ITranslationSource> translationSources = List.of(
+    public final List<ITranslationSource> translationSources = List.of(
             new English()
     );
 
@@ -45,6 +54,45 @@ public class AuthModule implements IBridgeModule {
 
     public AuthModule() {
         socialHandlersMap = new HashMap<>();
+    }
+
+    public boolean Authorize(SocialUser socialUser, UUID minecraftId) throws AuthorizeDuplicationException, SQLException{
+        var handler = getSocialHandler(socialUser.getPlatform());
+        if (handler == null) {
+            return false;
+        }
+
+        handler.Authorize(socialUser, minecraftId);
+        events.login.invoke(new LoginEvent(socialUser, minecraftId));
+        return true;
+    }
+
+    public @Nullable MinecraftUser tryGetMinecraftUser(SocialUser socialUser) {
+        
+        var handler = getSocialHandler(socialUser.getPlatform());
+        if (handler == null) {
+            return null;
+        }
+
+        return handler.tryGetMinecraftUser(socialUser);
+    }
+
+    public @Nullable UUID logoutUser(SocialUser socialUser) {
+        
+        var handler = getSocialHandler(socialUser.getPlatform());
+        if (handler == null) {
+            return null;
+        }
+
+        var minecraftId = handler.logoutUser(socialUser);
+        if (minecraftId != null) {
+            events.login.invoke(new LoginEvent(socialUser, minecraftId));
+        }
+        return minecraftId;
+    }
+
+    public Logger getLogger() {
+        return logger;
     }
 
     public Collection<ISocialPlatformHandler> getSocialHandlers() {
@@ -57,6 +105,8 @@ public class AuthModule implements IBridgeModule {
 
     @Override
     public boolean init(ISocialBridge bridge) {
+        logger = Logger.getLogger(bridge.getLogger().getName() + '.' + NAME);
+
         for (var handler : List.of(
                 new TelegramHandler(bridge)
         )) {
@@ -71,14 +121,14 @@ public class AuthModule implements IBridgeModule {
                 var daoSession = ctx.registerTable(AuthSession.class);
 
                 if (daoSession == null) {
-                    throw new RuntimeException("Не удалось проинициализировать обязательную таблицу - " + AuthSession.class.getSimpleName());
+                    throw new RuntimeException("Failed to create required database table - " + AuthSession.class.getSimpleName());
                 }
 
                 TableUtils.createTableIfNotExists(ctx.getConnectionSource(), Association_telegram.class);
                 var daoTg = ctx.registerTable(Association_telegram.class);
 
                 if (daoTg == null) {
-                    throw new RuntimeException("Не удалось проинициализировать обязательную таблицу - " + Association_telegram.class.getSimpleName());
+                    throw new RuntimeException("Failed to create required database table - " + Association_telegram.class.getSimpleName());
                 }
 
                 return null;

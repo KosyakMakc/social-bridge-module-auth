@@ -8,6 +8,8 @@ import io.github.kosyakmakc.socialBridge.SocialPlatforms.SocialUser;
 import java.sql.SQLException;
 import java.util.UUID;
 
+import org.jetbrains.annotations.Nullable;
+
 public interface ISocialPlatformHandler {
     boolean isConnected();
     ISocialPlatform getPlatform();
@@ -15,5 +17,5 @@ public interface ISocialPlatformHandler {
     void Authorize(SocialUser sender, UUID minecraftId) throws SQLException, AuthorizeDuplicationException;
     MinecraftUser tryGetMinecraftUser(SocialUser socialUser);
     boolean isAuthorized(MinecraftUser minecraftUser);
-    boolean logoutUser(SocialUser socialUser);
+    @Nullable UUID logoutUser(SocialUser socialUser);
 }

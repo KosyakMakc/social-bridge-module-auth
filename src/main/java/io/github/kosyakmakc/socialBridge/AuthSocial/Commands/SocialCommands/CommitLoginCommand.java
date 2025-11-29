@@ -18,17 +18,20 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 
 public class CommitLoginCommand extends SocialCommandBase {
-    public CommitLoginCommand() {
+    private final AuthModule module;
+
+    public CommitLoginCommand(AuthModule module) {
         super(
             "login",
             List.of(
                 CommandArgument.ofInteger("auth-code")));
+        this.module = module;
     }
 
     @Override
     public void execute(SocialUser sender, List<Object> args) {
         var bridge = getBridge();
-        var logger = bridge.getLogger();
+        var logger = module.getLogger();
 
         var authCode = (int) args.getFirst();
         var placeholders = new HashMap<String, String>();
@@ -54,17 +57,19 @@ public class CommitLoginCommand extends SocialCommandBase {
                 var session = availableSessions.getFirst();
 
                 try {
-                    bridge.getModule(AuthModule.class)
-                            .getSocialHandler(sender.getPlatform())
-                            .Authorize(sender, session.getMinecraftId());
+                    var isSuccess = module.Authorize(sender, session.getMinecraftId());
+                    if (isSuccess) {
+                        commitState.set(CommitLoginState.Commited);
 
-                    commitState.set(CommitLoginState.Commited);
+                        session.spend();
+                        database.getDaoTable(AuthSession.class).update(session);
+                    }
+                    else {
+                        commitState.set(CommitLoginState.NotSupportedPlatform);
+                    }
                 } catch (AuthorizeDuplicationException e) {
                     commitState.set(CommitLoginState.DuplicationError);
                 }
-
-                session.spend();
-                database.getDaoTable(AuthSession.class).update(session);
 
                 return null;
             });
@@ -85,6 +90,11 @@ public class CommitLoginCommand extends SocialCommandBase {
                     logger.info(sender.getName() + " duplicating his logins to " + sender.getPlatform().getPlatformName() + ", ignoring it...");
                     sender.sendMessage(getBridge().getLocalizationService().getMessage(sender.getLocale(), AuthMessageKey.YOU_ARE_ALREADY_AUTHORIZED), placeholders);
                 }
+                case NotSupportedPlatform -> {
+                    logger.info(sender.getName() + " trying to commit on not supported platform " + sender.getPlatform().getPlatformName() + ", ignoring it...");
+                    sender.sendMessage(getBridge().getLocalizationService().getMessage(sender.getLocale(), AuthMessageKey.UNSUPPORTED_PLATFORM), placeholders);
+                }
+                default -> throw new IllegalArgumentException("Unexpected value: " + resultState);
             }
         }
         catch (SQLException e) {
@@ -97,5 +107,6 @@ public class CommitLoginCommand extends SocialCommandBase {
         Commited,
         NotCommited,
         DuplicationError,
+        NotSupportedPlatform,
     }
 }
