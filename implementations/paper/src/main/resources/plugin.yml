@@ -1,5 +1,5 @@
 name: AuthSocial
-version: '0.2.1'
+version: '0.4.0'
 main: io.github.kosyakmakc.socialBridge.AuthModule.paper.AuthModulePlugin
 api-version: '1.21'
 authors: [ kosyakmakc ]

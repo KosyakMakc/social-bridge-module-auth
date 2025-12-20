@@ -33,12 +33,10 @@ public class Association_telegram implements IDatabaseTable {
     @DatabaseField(columnName = CREATED_AT_FIELD_NAME)
     private Date createdAt;
 
-    @SuppressWarnings("unused")
     public Association_telegram() {
 
     }
 
-    @SuppressWarnings("unused")
     public Association_telegram(UUID minecraftId, long telegramId) {
         this.minecraftId = minecraftId;
         this.telegramId = telegramId;
@@ -48,27 +46,22 @@ public class Association_telegram implements IDatabaseTable {
         this.createdAt = Date.from(now);
     }
 
-    @SuppressWarnings("unused")
     public UUID getMinecraftId() {
         return this.minecraftId;
     }
 
-    @SuppressWarnings("unused")
     public long getTelegramId() {
         return telegramId;
     }
 
-    @SuppressWarnings("unused")
     public boolean isDeleted() {
         return isDeleted;
     }
 
-    @SuppressWarnings("unused")
     public void Delete() {
         this.isDeleted = true;
     }
 
-    @SuppressWarnings("unused")
     public Date getCreatedAt() {
         return createdAt;
     }

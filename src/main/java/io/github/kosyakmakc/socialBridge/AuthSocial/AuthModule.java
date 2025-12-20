@@ -10,9 +10,12 @@ import io.github.kosyakmakc.socialBridge.AuthSocial.DatabaseTables.AuthSession;
 import io.github.kosyakmakc.socialBridge.AuthSocial.SocialPlatformHandlers.ISocialPlatformHandler;
 import io.github.kosyakmakc.socialBridge.AuthSocial.SocialPlatformHandlers.TelegramHandler;
 import io.github.kosyakmakc.socialBridge.AuthSocial.Translations.English;
+import io.github.kosyakmakc.socialBridge.AuthSocial.Translations.Russian;
+import io.github.kosyakmakc.socialBridge.AuthSocial.Utils.LoginState;
 import io.github.kosyakmakc.socialBridge.Commands.MinecraftCommands.IMinecraftCommand;
 import io.github.kosyakmakc.socialBridge.Commands.SocialCommands.ISocialCommand;
 import io.github.kosyakmakc.socialBridge.DatabasePlatform.DefaultTranslations.ITranslationSource;
+import io.github.kosyakmakc.socialBridge.MinecraftPlatform.IModuleLoader;
 import io.github.kosyakmakc.socialBridge.MinecraftPlatform.MinecraftUser;
 import io.github.kosyakmakc.socialBridge.IBridgeModule;
 import io.github.kosyakmakc.socialBridge.ISocialBridge;
@@ -25,15 +28,17 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
-import org.jetbrains.annotations.Nullable;
-
 public class AuthModule implements IBridgeModule {
-    public static final Version SocialBridge_CompabilityVersion = new Version(0, 2, 1);
-    private static final String NAME = "AuthSocial";
+    public static final UUID ID = UUID.fromString("11752e9b-8968-42ca-8513-6ce3e52a27b4");
+    public static final Version SocialBridge_CompabilityVersion = new Version(0, 4, 0);
+    private static final String NAME = "auth";
     private Logger logger;
+    private ISocialBridge bridge;
 
+    private final IModuleLoader loader;
     public final AuthEvents events = new AuthEvents();
 
     public final List<ISocialCommand> socialCommands = List.of(
@@ -47,27 +52,46 @@ public class AuthModule implements IBridgeModule {
     );
 
     public final List<ITranslationSource> translationSources = List.of(
-            new English()
+            new English(),
+            new Russian()
     );
 
     private final HashMap<ISocialPlatform, ISocialPlatformHandler> socialHandlersMap;
 
-    public AuthModule() {
+    public AuthModule(IModuleLoader loader) {
+        this.loader = loader;
         socialHandlersMap = new HashMap<>();
     }
 
-    public boolean Authorize(SocialUser socialUser, UUID minecraftId) throws AuthorizeDuplicationException, SQLException{
-        var handler = getSocialHandler(socialUser.getPlatform());
-        if (handler == null) {
-            return false;
-        }
-
-        handler.Authorize(socialUser, minecraftId);
-        events.login.invoke(new LoginEvent(socialUser, minecraftId));
-        return true;
+    @Override
+    public UUID getId() {
+        return ID;
     }
 
-    public @Nullable MinecraftUser tryGetMinecraftUser(SocialUser socialUser) {
+    @Override
+    public IModuleLoader getLoader() {
+        return loader;
+    }
+
+    public CompletableFuture<LoginState> Authorize(SocialUser socialUser, UUID minecraftId) {
+        var handler = getSocialHandler(socialUser.getPlatform());
+        if (handler == null) {
+            return CompletableFuture.completedFuture(LoginState.NotSupportedPlatform);
+        }
+
+        return handler
+            .Authorize(socialUser, minecraftId)
+            .thenCompose(loginState -> {
+                if (loginState == LoginState.Commited) {
+                    return events.login.invoke(new LoginEvent(socialUser, minecraftId))
+                    .thenApply(Void -> loginState);
+                }
+                
+                return CompletableFuture.completedFuture(loginState);
+            });
+    }
+
+    public CompletableFuture<MinecraftUser> tryGetMinecraftUser(SocialUser socialUser) {
         
         var handler = getSocialHandler(socialUser.getPlatform());
         if (handler == null) {
@@ -77,18 +101,24 @@ public class AuthModule implements IBridgeModule {
         return handler.tryGetMinecraftUser(socialUser);
     }
 
-    public @Nullable UUID logoutUser(SocialUser socialUser) {
+    public CompletableFuture<UUID> logoutUser(SocialUser socialUser) {
         
         var handler = getSocialHandler(socialUser.getPlatform());
         if (handler == null) {
             return null;
         }
 
-        var minecraftId = handler.logoutUser(socialUser);
-        if (minecraftId != null) {
-            events.login.invoke(new LoginEvent(socialUser, minecraftId));
-        }
-        return minecraftId;
+        return handler
+            .logoutUser(socialUser)
+            .thenCompose(minecraftId -> {
+                if (minecraftId != null) {
+                    return events.login
+                            .invoke(new LoginEvent(socialUser, minecraftId))
+                            .thenApply(Void -> minecraftId);
+                }
+
+                return CompletableFuture.completedFuture(minecraftId);
+            });
     }
 
     public Logger getLogger() {
@@ -104,8 +134,9 @@ public class AuthModule implements IBridgeModule {
     }
 
     @Override
-    public boolean init(ISocialBridge bridge) {
+    public CompletableFuture<Boolean> enable(ISocialBridge bridge) {
         logger = Logger.getLogger(bridge.getLogger().getName() + '.' + NAME);
+        this.bridge = bridge;
 
         for (var handler : List.of(
                 new TelegramHandler(bridge)
@@ -115,8 +146,8 @@ public class AuthModule implements IBridgeModule {
             }
         }
 
-        try {
-            bridge.queryDatabase(ctx -> {
+        return bridge.queryDatabase(ctx -> {
+            try {
                 TableUtils.createTableIfNotExists(ctx.getConnectionSource(), AuthSession.class);
                 var daoSession = ctx.registerTable(AuthSession.class);
 
@@ -131,12 +162,27 @@ public class AuthModule implements IBridgeModule {
                     throw new RuntimeException("Failed to create required database table - " + Association_telegram.class.getSimpleName());
                 }
 
-                return null;
-            });
-            return true;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+                return true;
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        })
+        .exceptionally(err -> {
+            err.printStackTrace();
+            return false;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Boolean> disable() {
+        this.bridge = null;
+        socialHandlersMap.clear();
+        return CompletableFuture.completedFuture(true);
+    }
+
+    @Override
+    public ISocialBridge getBridge() {
+        return bridge;
     }
 
     @Override

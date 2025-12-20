@@ -38,12 +38,10 @@ public class AuthSession implements IDatabaseTable {
     @DatabaseField(columnName = EXPIRED_AT_FIELD_NAME, index = true)
     private Date expiredAt;
 
-    @SuppressWarnings("unused")
     public AuthSession() {
 
     }
 
-    @SuppressWarnings("unused")
     public AuthSession(UUID minecraftId, int authCode, Duration expiration) {
         this.minecraftId = minecraftId;
         this.authCode = authCode;
@@ -53,32 +51,26 @@ public class AuthSession implements IDatabaseTable {
         this.isSpent = false;
     }
 
-    @SuppressWarnings("unused")
     public UUID getMinecraftId() {
         return minecraftId;
     }
 
-    @SuppressWarnings("unused")
     public int getAuthCode() {
         return authCode;
     }
 
-    @SuppressWarnings("unused")
     public boolean isSpent() {
         return isSpent;
     }
 
-    @SuppressWarnings("unused")
     public void spend() {
         this.isSpent = true;
     }
 
-    @SuppressWarnings("unused")
     public Date getCreatedAt() {
         return createdAt;
     }
 
-    @SuppressWarnings("unused")
     public Date getExpiredAt() {
         return expiredAt;
     }

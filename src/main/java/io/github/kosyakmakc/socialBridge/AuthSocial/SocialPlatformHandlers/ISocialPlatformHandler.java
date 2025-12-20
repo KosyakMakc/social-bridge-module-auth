@@ -1,21 +1,19 @@
 package io.github.kosyakmakc.socialBridge.AuthSocial.SocialPlatformHandlers;
 
-import io.github.kosyakmakc.socialBridge.AuthSocial.AuthorizeDuplicationException;
+import io.github.kosyakmakc.socialBridge.AuthSocial.Utils.LoginState;
 import io.github.kosyakmakc.socialBridge.MinecraftPlatform.MinecraftUser;
 import io.github.kosyakmakc.socialBridge.SocialPlatforms.ISocialPlatform;
 import io.github.kosyakmakc.socialBridge.SocialPlatforms.SocialUser;
 
-import java.sql.SQLException;
 import java.util.UUID;
-
-import org.jetbrains.annotations.Nullable;
+import java.util.concurrent.CompletableFuture;
 
 public interface ISocialPlatformHandler {
     boolean isConnected();
     ISocialPlatform getPlatform();
 
-    void Authorize(SocialUser sender, UUID minecraftId) throws SQLException, AuthorizeDuplicationException;
-    MinecraftUser tryGetMinecraftUser(SocialUser socialUser);
-    boolean isAuthorized(MinecraftUser minecraftUser);
-    @Nullable UUID logoutUser(SocialUser socialUser);
+    CompletableFuture<LoginState> Authorize(SocialUser sender, UUID minecraftId);
+    CompletableFuture<MinecraftUser> tryGetMinecraftUser(SocialUser socialUser);
+    CompletableFuture<Boolean> isAuthorized(MinecraftUser minecraftUser);
+    CompletableFuture<UUID> logoutUser(SocialUser socialUser);
 }

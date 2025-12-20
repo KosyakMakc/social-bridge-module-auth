@@ -1,7 +1,7 @@
 package io.github.kosyakmakc.socialBridge.AuthSocial.SocialPlatformHandlers;
 
-import io.github.kosyakmakc.socialBridge.AuthSocial.AuthorizeDuplicationException;
 import io.github.kosyakmakc.socialBridge.AuthSocial.DatabaseTables.Association_telegram;
+import io.github.kosyakmakc.socialBridge.AuthSocial.Utils.LoginState;
 import io.github.kosyakmakc.socialBridge.ISocialBridge;
 import io.github.kosyakmakc.socialBridge.MinecraftPlatform.MinecraftUser;
 import io.github.kosyakmakc.socialBridge.SocialPlatforms.ISocialPlatform;
@@ -11,11 +11,8 @@ import io.github.kosyakmakc.socialBridgeTelegram.TelegramUser;
 
 import java.sql.SQLException;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
-
-import org.jetbrains.annotations.Nullable;
 
 public record TelegramHandler(ISocialBridge bridge) implements ISocialPlatformHandler {
 
@@ -35,72 +32,78 @@ public record TelegramHandler(ISocialBridge bridge) implements ISocialPlatformHa
     }
 
     @Override
-    public void Authorize(SocialUser sender, UUID minecraftId) throws SQLException, AuthorizeDuplicationException {
+    public CompletableFuture<LoginState> Authorize(SocialUser sender, UUID minecraftId) {
         if (!(sender instanceof TelegramUser tgUser)) {
             throw new RuntimeException("incorrect usage, SocialUser(" + sender.getClass().getName() + ") MUST BE assigned to this ISocialPlatform(" + this.getClass().getName() + ")");
         }
 
-        var isDuplicate = new AtomicBoolean(false);
-        bridge.queryDatabase(databaseContext -> {
-            var existedRows = databaseContext.getDaoTable(Association_telegram.class)
-                    .queryBuilder()
+        return bridge.queryDatabase(databaseContext -> {
+            try {
+                var existedRows = databaseContext.getDaoTable(Association_telegram.class)
+                .queryBuilder()
                     .where()
                     .eq(Association_telegram.MINECRAFT_ID_FIELD_NAME, minecraftId)
                     .and()
                     .eq(Association_telegram.IS_DELETED_FIELD_NAME, false)
                     .countOf();
-
-            if (existedRows > 0) {
-                isDuplicate.set(true);
-            } else {
-                var association = new Association_telegram(minecraftId, (long) tgUser.getId());
-                databaseContext.getDaoTable(Association_telegram.class).create(association);
+                    
+                if (existedRows > 0) {
+                    return LoginState.DuplicationError;
+                } else {
+                    var association = new Association_telegram(minecraftId, (long) tgUser.getId().value());
+                    databaseContext.getDaoTable(Association_telegram.class).create(association);
+                }
+                
+                return LoginState.Commited;
             }
-
-            return null;
+            catch (SQLException err) {
+                err.printStackTrace();
+                return LoginState.NotCommited;
+            }
         });
-
-        if (isDuplicate.get()) {
-            throw new AuthorizeDuplicationException();
-        }
     }
 
     @Override
-    public MinecraftUser tryGetMinecraftUser(SocialUser socialUser) {
+    public CompletableFuture<MinecraftUser> tryGetMinecraftUser(SocialUser socialUser) {
         if (!(socialUser instanceof TelegramUser tgUser)) {
             throw new RuntimeException("incorrect usage, SocialUser(" + socialUser.getClass().getName() + ") MUST BE assigned to this ISocialPlatform(" + this.getClass().getName() + ")");
         }
         var logger = bridge.getLogger();
-        var result = new AtomicReference<MinecraftUser>(null);
-        try {
-            bridge.queryDatabase(databaseContext -> {
+        return bridge.queryDatabase(databaseContext -> {
+            try {
                 var association = databaseContext.getDaoTable(Association_telegram.class)
                         .queryBuilder()
                         .where()
-                        .eq(Association_telegram.TELEGRAM_ID_FIELD_NAME, tgUser.getId())
+                        .eq(Association_telegram.TELEGRAM_ID_FIELD_NAME, tgUser.getId().value())
                         .and()
                         .eq(Association_telegram.IS_DELETED_FIELD_NAME, false)
                         .queryForFirst();
 
                 if (association != null) {
-                    result.set(bridge.getMinecraftPlatform().getUser(association.getMinecraftId()));
+                    return association.getMinecraftId();
                 }
 
                 return null;
-            });
-        } catch (SQLException e) {
-            logger.log(Level.SEVERE, "failed get minecraft user", e);
-        }
-
-        return result.get();
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "failed get minecraft user", e);
+                return null;
+            }
+        })
+        .thenCompose(uuid -> {
+            if (uuid == null) {
+                return CompletableFuture.completedStage(null);
+            }
+            else {
+                return bridge.getMinecraftPlatform().tryGetUser(uuid);
+            }
+        });
     }
 
     @Override
-    public boolean isAuthorized(MinecraftUser minecraftUser) {
+    public CompletableFuture<Boolean> isAuthorized(MinecraftUser minecraftUser) {
         var logger = bridge.getLogger();
-        var result = new AtomicReference<MinecraftUser>(null);
-        try {
-            bridge.queryDatabase(databaseContext -> {
+        return bridge.queryDatabase(databaseContext -> {
+            try {
                 var association = databaseContext.getDaoTable(Association_telegram.class)
                         .queryBuilder()
                         .where()
@@ -110,31 +113,30 @@ public record TelegramHandler(ISocialBridge bridge) implements ISocialPlatformHa
                         .queryForFirst();
 
                 if (association != null) {
-                    result.set(bridge.getMinecraftPlatform().getUser(association.getMinecraftId()));
+                    return true;
                 }
 
-                return null;
-            });
-        } catch (SQLException e) {
-            logger.log(Level.SEVERE, "failed to check IsAuthorized minecraft-user", e);
-        }
+                return false;
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "failed to check IsAuthorized minecraft-user", e);
+                return false;
+            }
+        });
 
-        return result.get() != null;
     }
 
     @Override
-    public @Nullable UUID logoutUser(SocialUser socialUser) {
+    public CompletableFuture<UUID> logoutUser(SocialUser socialUser) {
         if (!(socialUser instanceof TelegramUser tgUser)) {
             throw new RuntimeException("incorrect usage, SocialUser(" + socialUser.getClass().getName() + ") MUST BE assigned to this ISocialPlatform(" + this.getClass().getName() + ")");
         }
         var logger = bridge.getLogger();
-        var result = new AtomicReference<UUID>(null);
-        try {
-            bridge.queryDatabase(databaseContext -> {
+        return bridge.queryDatabase(databaseContext -> {
+            try {
                 var association = databaseContext.getDaoTable(Association_telegram.class)
                         .queryBuilder()
                         .where()
-                        .eq(Association_telegram.TELEGRAM_ID_FIELD_NAME, tgUser.getId())
+                        .eq(Association_telegram.TELEGRAM_ID_FIELD_NAME, tgUser.getId().value())
                         .and()
                         .eq(Association_telegram.IS_DELETED_FIELD_NAME, false)
                         .queryForFirst();
@@ -142,17 +144,14 @@ public record TelegramHandler(ISocialBridge bridge) implements ISocialPlatformHa
                 if (association != null) {
                     association.Delete();
                     databaseContext.getDaoTable(Association_telegram.class).update(association);
-                    result.set(association.getMinecraftId());
+                    return association.getMinecraftId();
                 } else {
-                    result.set(null);
+                    return null;
                 }
-
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "failed get minecraft user", e);
                 return null;
-            });
-        } catch (SQLException e) {
-            logger.log(Level.SEVERE, "failed get minecraft user", e);
-        }
-
-        return result.get();
+            }
+        });
     }
 }

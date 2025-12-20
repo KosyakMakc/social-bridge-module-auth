@@ -20,7 +20,7 @@ public class LoginCommand extends MinecraftCommandBase {
     private final AuthModule module;
 
     public LoginCommand(AuthModule module) {
-        super("login", AuthPermissions.CAN_LOGIN);
+        super("login", AuthMessageKey.LOGIN_FROM_MINECRAFT_DESCRIPTION, AuthPermissions.CAN_LOGIN);
         random = new Random(System.currentTimeMillis());
         this.module = module;
     }
@@ -31,22 +31,36 @@ public class LoginCommand extends MinecraftCommandBase {
         var logger = module.getLogger();
 
         var code = random.nextInt(100_000, 1_000_000);
-        var message = getBridge().getLocalizationService().getMessage(sender.getLocale(), AuthMessageKey.LOGIN_FROM_MINECRAFT);
         var placeholders = new HashMap<String, String>();
         placeholders.put("placeholder-code", Integer.toString(code));
 
         var sessionDbRecord = new AuthSession(sender.getId(), code, Duration.ofMinutes(10));
-        try {
-            bridge.queryDatabase(databaseContext -> {
+        bridge.queryDatabase(databaseContext -> {
+            try {
                 databaseContext.getDaoTable(AuthSession.class).create(sessionDbRecord);
-                return null;
-            });
+                return true;
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "failed save auth session to database", e);
+                return false;
+            }
+        })
+        .thenCompose(isSuccess -> {
+            if(isSuccess) {
+                logger.info(sender.getName() + " start login session");
+                return getBridge()
+                    .getLocalizationService().getMessage(module, sender.getLocale(), AuthMessageKey.LOGIN_FROM_MINECRAFT)
+                    .thenAccept(msgTemplate -> {
+                        sender.sendMessage(msgTemplate, placeholders);
+                    });
+            }
+            else {
+                return getBridge()
+                    .getLocalizationService().getMessage(module, sender.getLocale(), MessageKey.INTERNAL_SERVER_ERROR)
+                    .thenAccept(msgTemplate -> {
+                        sender.sendMessage(msgTemplate, new HashMap<>());
+                    });
+            }
+        });
 
-            logger.info(sender.getName() + " start login session");
-            sender.sendMessage(message, placeholders);
-        } catch (SQLException e) {
-            logger.log(Level.SEVERE, "failed save auth session to database", e);
-            sender.sendMessage(getBridge().getLocalizationService().getMessage(sender.getLocale(), MessageKey.INTERNAL_SERVER_ERROR), new HashMap<>());
-        }
     }
 }
