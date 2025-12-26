@@ -1,20 +1,31 @@
 package io.github.kosyakmakc.socialBridge.AuthSocial.SocialPlatformHandlers;
 
+import io.github.kosyakmakc.socialBridge.AuthSocial.AuthModule;
 import io.github.kosyakmakc.socialBridge.AuthSocial.DatabaseTables.Association_telegram;
 import io.github.kosyakmakc.socialBridge.AuthSocial.Utils.LoginState;
 import io.github.kosyakmakc.socialBridge.ISocialBridge;
 import io.github.kosyakmakc.socialBridge.MinecraftPlatform.MinecraftUser;
 import io.github.kosyakmakc.socialBridge.SocialPlatforms.ISocialPlatform;
+import io.github.kosyakmakc.socialBridge.SocialPlatforms.Identifier;
 import io.github.kosyakmakc.socialBridge.SocialPlatforms.SocialUser;
 import io.github.kosyakmakc.socialBridgeTelegram.TelegramPlatform;
 import io.github.kosyakmakc.socialBridgeTelegram.TelegramUser;
+import io.github.kosyakmakc.socialBridgeTelegram.DatabaseTables.TelegramUserTable;
 
 import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public record TelegramHandler(ISocialBridge bridge) implements ISocialPlatformHandler {
+public class TelegramHandler implements ISocialPlatformHandler {
+    private final ISocialBridge bridge;
+    private final Logger logger;
+
+    public TelegramHandler (ISocialBridge bridge) {
+        this.bridge = bridge;
+        logger = Logger.getLogger(bridge.getLogger().getName() + '.' + AuthModule.NAME + '.' + this.getClass().getSimpleName());
+    }
 
     @Override
     public boolean isConnected() {
@@ -68,7 +79,6 @@ public record TelegramHandler(ISocialBridge bridge) implements ISocialPlatformHa
         if (!(socialUser instanceof TelegramUser tgUser)) {
             throw new RuntimeException("incorrect usage, SocialUser(" + socialUser.getClass().getName() + ") MUST BE assigned to this ISocialPlatform(" + this.getClass().getName() + ")");
         }
-        var logger = bridge.getLogger();
         return bridge.queryDatabase(databaseContext -> {
             try {
                 var association = databaseContext.getDaoTable(Association_telegram.class)
@@ -101,7 +111,6 @@ public record TelegramHandler(ISocialBridge bridge) implements ISocialPlatformHa
 
     @Override
     public CompletableFuture<Boolean> isAuthorized(MinecraftUser minecraftUser) {
-        var logger = bridge.getLogger();
         return bridge.queryDatabase(databaseContext -> {
             try {
                 var association = databaseContext.getDaoTable(Association_telegram.class)
@@ -130,7 +139,6 @@ public record TelegramHandler(ISocialBridge bridge) implements ISocialPlatformHa
         if (!(socialUser instanceof TelegramUser tgUser)) {
             throw new RuntimeException("incorrect usage, SocialUser(" + socialUser.getClass().getName() + ") MUST BE assigned to this ISocialPlatform(" + this.getClass().getName() + ")");
         }
-        var logger = bridge.getLogger();
         return bridge.queryDatabase(databaseContext -> {
             try {
                 var association = databaseContext.getDaoTable(Association_telegram.class)
@@ -151,6 +159,31 @@ public record TelegramHandler(ISocialBridge bridge) implements ISocialPlatformHa
             } catch (SQLException e) {
                 logger.log(Level.SEVERE, "failed get minecraft user", e);
                 return null;
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<SocialUser> tryGetSocialUser(Identifier id) {
+        return bridge.queryDatabase(databaseContext -> {try {
+                var userRecord = databaseContext.getDaoTable(TelegramUserTable.class)
+                        .queryBuilder()
+                        .where()
+                        .eq(TelegramUserTable.ID_FIELD_NAME, (long) id.value())
+                        .queryForFirst();
+
+                return userRecord;
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "failed get social user", e);
+                return null;
+            }
+        })
+        .thenApply(userRecord -> {
+            if (userRecord == null) {
+                return null;
+            }
+            else {
+                return new TelegramUser(getPlatform(), userRecord);
             }
         });
     }

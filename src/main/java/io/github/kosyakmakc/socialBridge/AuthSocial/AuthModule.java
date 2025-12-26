@@ -34,7 +34,7 @@ import java.util.logging.Logger;
 public class AuthModule implements IBridgeModule {
     public static final UUID ID = UUID.fromString("11752e9b-8968-42ca-8513-6ce3e52a27b4");
     public static final Version SocialBridge_CompabilityVersion = new Version(0, 4, 0);
-    private static final String NAME = "auth";
+    public static final String NAME = "auth";
     private Logger logger;
     private ISocialBridge bridge;
 
