@@ -162,29 +162,4 @@ public class TelegramHandler implements ISocialPlatformHandler {
             }
         });
     }
-
-    @Override
-    public CompletableFuture<SocialUser> tryGetSocialUser(Identifier id) {
-        return bridge.queryDatabase(databaseContext -> {try {
-                var userRecord = databaseContext.getDaoTable(TelegramUserTable.class)
-                        .queryBuilder()
-                        .where()
-                        .eq(TelegramUserTable.ID_FIELD_NAME, (long) id.value())
-                        .queryForFirst();
-
-                return userRecord;
-            } catch (SQLException e) {
-                logger.log(Level.SEVERE, "failed get social user", e);
-                return null;
-            }
-        })
-        .thenApply(userRecord -> {
-            if (userRecord == null) {
-                return null;
-            }
-            else {
-                return new TelegramUser(getPlatform(), userRecord);
-            }
-        });
-    }
 }
