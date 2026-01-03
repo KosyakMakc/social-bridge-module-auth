@@ -17,8 +17,8 @@ import io.github.kosyakmakc.socialBridge.Commands.SocialCommands.ISocialCommand;
 import io.github.kosyakmakc.socialBridge.DatabasePlatform.DefaultTranslations.ITranslationSource;
 import io.github.kosyakmakc.socialBridge.MinecraftPlatform.IModuleLoader;
 import io.github.kosyakmakc.socialBridge.MinecraftPlatform.MinecraftUser;
-import io.github.kosyakmakc.socialBridge.IBridgeModule;
 import io.github.kosyakmakc.socialBridge.ISocialBridge;
+import io.github.kosyakmakc.socialBridge.ISocialModule;
 import io.github.kosyakmakc.socialBridge.SocialPlatforms.ISocialPlatform;
 import io.github.kosyakmakc.socialBridge.SocialPlatforms.SocialUser;
 import io.github.kosyakmakc.socialBridge.Utils.Version;
@@ -31,9 +31,9 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
-public class AuthModule implements IBridgeModule {
+public class AuthModule implements ISocialModule {
     public static final UUID ID = UUID.fromString("11752e9b-8968-42ca-8513-6ce3e52a27b4");
-    public static final Version SocialBridge_CompabilityVersion = new Version(0, 4, 0);
+    public static final Version SocialBridge_CompabilityVersion = new Version(0, 5, 0);
     public static final String NAME = "auth";
     private Logger logger;
     private ISocialBridge bridge;
