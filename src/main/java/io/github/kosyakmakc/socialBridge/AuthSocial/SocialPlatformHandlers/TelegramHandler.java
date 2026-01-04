@@ -6,12 +6,9 @@ import io.github.kosyakmakc.socialBridge.AuthSocial.Utils.LoginState;
 import io.github.kosyakmakc.socialBridge.ISocialBridge;
 import io.github.kosyakmakc.socialBridge.MinecraftPlatform.MinecraftUser;
 import io.github.kosyakmakc.socialBridge.SocialPlatforms.ISocialPlatform;
-import io.github.kosyakmakc.socialBridge.SocialPlatforms.Identifier;
 import io.github.kosyakmakc.socialBridge.SocialPlatforms.SocialUser;
 import io.github.kosyakmakc.socialBridgeTelegram.TelegramPlatform;
 import io.github.kosyakmakc.socialBridgeTelegram.TelegramUser;
-import io.github.kosyakmakc.socialBridgeTelegram.DatabaseTables.TelegramUserTable;
-
 import java.sql.SQLException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;

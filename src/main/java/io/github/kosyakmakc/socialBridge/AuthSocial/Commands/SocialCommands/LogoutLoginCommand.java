@@ -34,7 +34,7 @@ public class LogoutLoginCommand extends SocialCommandBase {
                     logger.info("social(" + sender.getName() + ") failed to logout - not authenticated.");
                     return getBridge()
                         .getLocalizationService().getMessage(module, sender.getLocale(), AuthMessageKey.LOGOUT_FAILED)
-                        .thenAccept(msgTemplate -> sender.sendMessage(msgTemplate, placeholders)); // TODO async
+                        .thenCompose(msgTemplate -> sender.sendMessage(msgTemplate, placeholders));
                 }
                 var minecraftName = player.getName();
                 return module
@@ -46,13 +46,13 @@ public class LogoutLoginCommand extends SocialCommandBase {
                             logger.info("minecraft(" + minecraftName + ") is logout from " + platformName + " platform.");
                             return getBridge()
                                 .getLocalizationService().getMessage(module, sender.getLocale(), AuthMessageKey.LOGOUT_SUCCESS)
-                                .thenAccept(msgTemplate -> sender.sendMessage(msgTemplate, placeholders)); // TODO async
+                                .thenCompose(msgTemplate -> sender.sendMessage(msgTemplate, placeholders));
                         }
                         else {
                             logger.info("social(" + sender.getName() + ") failed to logout - not authenticated.");
                             return getBridge()
                                 .getLocalizationService().getMessage(module, sender.getLocale(), AuthMessageKey.LOGOUT_FAILED)
-                                .thenAccept(msgTemplate -> sender.sendMessage(msgTemplate, placeholders)); // TODO async
+                                .thenCompose(msgTemplate -> sender.sendMessage(msgTemplate, placeholders));
                         }
                     });
             });
